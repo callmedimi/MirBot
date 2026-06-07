@@ -7,8 +7,8 @@
     <a href="https://t.me/mirzapanelgroup" target="_blank">
         <img src="https://img.shields.io/badge/Telegram-Group-orange?style=for-the-badge&logo=telegram" alt="Telegram Group"/>
     </a>
-    <a href="https://github.com/mahdiMGF2/mirzabot" target="_blank">
-        <img src="https://img.shields.io/github/stars/mahdiMGF2/mirzabot?style=for-the-badge&logo=github" alt="GitHub Stars"/>
+    <a href="https://github.com/callmedimi/MirBot" target="_blank">
+        <img src="https://img.shields.io/github/stars/callmedimi/MirBot?style=for-the-badge&logo=github" alt="GitHub Stars"/>
     </a>
 </p>
 
@@ -63,7 +63,7 @@ Before executing the script, point your domain's **A record** to your server's p
 Connect to your server via SSH as the `root` user and execute the bootstrap command:
 
 ```bash
-curl -o install.sh -L https://raw.githubusercontent.com/mahdiMGF2/mirzabot/main/install.sh && bash install.sh
+curl -o install.sh -L https://raw.githubusercontent.com/callmedimi/MirBot/main/install.sh && bash install.sh
 ```
 
 > [!NOTE]
@@ -201,7 +201,7 @@ To remove all configuration files, databases, and package installations from the
 ## 👥 Contributors
 
 <p align="center">
-  <a href="https://github.com/mahdiMGF2/mirzabot/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=mahdiMGF2/mirzabot" alt="Contributors List"/>
+  <a href="https://github.com/callmedimi/MirBot/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=callmedimi/MirBot" alt="Contributors List"/>
   </a>
 </p>
