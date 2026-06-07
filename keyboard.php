@@ -1202,7 +1202,8 @@ $keyboardtypepanel = json_encode([
         ],
         [
             ['text' => "WGDashboard", 'callback_data' => 'typepanel#WGDashboard'],
-            ['text' => "s_ui", 'callback_data' => 'typepanel#s_ui']
+            ['text' => "s_ui (Cookie)", 'callback_data' => 'typepanel#s_ui'],
+            ['text' => "3x-ui (Token)", 'callback_data' => 'typepanel#s_ui_token']
         ],
         [
             ['text' => "ibsng", 'callback_data' => 'typepanel#ibsng'],

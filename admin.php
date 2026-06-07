@@ -677,7 +677,7 @@ if (in_array($text, $textadmin) || $datain == "admin") {
         savedata("save", "username", "null");
         savedata("save", "password", "null");
         return;
-    } elseif ($userdata['type'] == "s_ui" || $userdata['type'] == "WGDashboard") {
+    } elseif ($userdata['type'] == "s_ui_token" || $userdata['type'] == "WGDashboard") {
         sendmessage($from_id, $textbotlang['Admin']['adminphp']['ask_send_token'], $backadmin, 'HTML');
         step('add_password_panel', $from_id);
         savedata("save", "username", "null");
@@ -759,7 +759,8 @@ if (in_array($text, $textadmin) || $datain == "admin") {
     $stmt->bindParam(':limit_panel', $text);
     $stmt->bindParam(':namecustom', $namecustoms);
     $stmt->bindParam(':Methodextend', $extendtextadd);
-    $stmt->bindParam(':type', $userdata['type'], PDO::PARAM_STR);
+    $db_type = ($userdata['type'] == 's_ui_token') ? 's_ui' : $userdata['type'];
+    $stmt->bindParam(':type', $db_type, PDO::PARAM_STR);
     $stmt->bindParam(':conecton', $conecton);
     $stmt->bindParam(':inboundid', $inboundid);
     $stmt->bindParam(':agent', $agent);
@@ -797,7 +798,7 @@ if (in_array($text, $textadmin) || $datain == "admin") {
         sendmessage($from_id, $textbotlang['Admin']['adminphp']['err_account_enable_must_note'], null, 'HTML');
     } elseif ($userdata['type'] == "hiddify") {
         sendmessage($from_id, $textbotlang['Admin']['adminphp']['err_send_panel_admin_manage'], null, 'HTML');
-    } elseif ($userdata['type'] == "s_ui") {
+    } elseif ($userdata['type'] == "s_ui" || $userdata['type'] == "s_ui_token") {
         sendmessage($from_id, $textbotlang['Admin']['adminphp']['err_send_panel_user_1'], null, 'HTML');
     }
 }

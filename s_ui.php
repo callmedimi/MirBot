@@ -95,8 +95,8 @@ function request_s_ui($namepanel, $endpoint, $method = 'GET', $payload = null)
     $csrf_token = '';
     $cookie_file = __DIR__ . '/cookie_s_ui_' . ($marzban_list_get['code_panel'] ?? 'default') . '.txt';
     
-    // If username_panel is set, use cookie login; otherwise use Bearer token
-    if (!empty($marzban_list_get['username_panel'])) {
+    // If username_panel is set and is not empty or 'null', use cookie login; otherwise use Bearer token
+    if (!empty($marzban_list_get['username_panel']) && $marzban_list_get['username_panel'] !== 'null') {
         $csrf_token = loginS_ui($marzban_list_get, $cookie_file);
         if ($csrf_token) {
             $use_cookie = true;
