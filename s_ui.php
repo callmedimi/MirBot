@@ -95,12 +95,14 @@ function request_s_ui($namepanel, $endpoint, $method = 'GET', $payload = null)
     $csrf_token = '';
     $cookie_file = __DIR__ . '/cookie_s_ui_' . ($marzban_list_get['code_panel'] ?? 'default') . '.txt';
     
-    // If username_panel is set and is not empty or 'null', use cookie login; otherwise use Bearer token
+    // If username_panel is set and is not empty or 'null', try cookie login; fallback to Bearer token
     if (!empty($marzban_list_get['username_panel']) && $marzban_list_get['username_panel'] !== 'null') {
         $csrf_token = loginS_ui($marzban_list_get, $cookie_file);
         if ($csrf_token) {
             $use_cookie = true;
             $headers[] = 'X-CSRF-Token: ' . $csrf_token;
+        } else {
+            $headers[] = 'Authorization: Bearer ' . $marzban_list_get['password_panel'];
         }
     } else {
         $headers[] = 'Authorization: Bearer ' . $marzban_list_get['password_panel'];
@@ -137,9 +139,11 @@ function request_s_ui($namepanel, $endpoint, $method = 'GET', $payload = null)
     
     curl_setopt_array($curl, $options);
     $response = curl_exec($curl);
+    $http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
     
     if (curl_errno($curl)) {
         $error_msg = curl_error($curl);
+        error_log("[s_ui] CURL error for $url: $error_msg");
         curl_close($curl);
         if ($use_cookie && is_file($cookie_file)) {
             @unlink($cookie_file);
@@ -153,7 +157,13 @@ function request_s_ui($namepanel, $endpoint, $method = 'GET', $payload = null)
         @unlink($cookie_file);
     }
     
-    return json_decode($response, true);
+    $decoded = json_decode($response, true);
+    if ($decoded === null && $http_code !== 200) {
+        error_log("[s_ui] HTTP $http_code for $url – raw: " . substr($response, 0, 300));
+        return array('success' => false, 'msg' => "HTTP $http_code");
+    }
+    
+    return $decoded;
 }
 
 /**
@@ -165,39 +175,76 @@ function request_s_ui($namepanel, $endpoint, $method = 'GET', $payload = null)
  */
 function get_Clients_ui($username, $namepanel)
 {
+    // Try v3 /panel/api/clients/list first
     $response = request_s_ui($namepanel, '/panel/api/clients/list', 'GET');
-    if (!isset($response['success']) || !$response['success'] || !isset($response['obj'])) {
+    
+    if (isset($response['success']) && $response['success'] && isset($response['obj']) && is_array($response['obj'])) {
+        foreach ($response['obj'] as $client) {
+            if (isset($client['email']) && $client['email'] == $username) {
+                $links_res = request_s_ui($namepanel, '/panel/api/clients/links/' . urlencode($username), 'GET');
+                $links = [];
+                if (isset($links_res['success']) && $links_res['success'] && is_array($links_res['obj'])) {
+                    foreach ($links_res['obj'] as $uri) {
+                        $links[] = ['uri' => $uri];
+                    }
+                }
+                return array(
+                    'id' => $client['id'],
+                    'name' => $client['email'],
+                    'email' => $client['email'],
+                    'enable' => $client['enable'],
+                    'volume' => $client['totalGB'],
+                    'expiry' => $client['expiryTime'],
+                    'up' => $client['traffic']['up'] ?? 0,
+                    'down' => $client['traffic']['down'] ?? 0,
+                    'inbounds' => $client['inboundIds'] ?? [],
+                    'desc' => $client['comment'] ?? '',
+                    'links' => $links,
+                    'config' => $client
+                );
+            }
+        }
+        error_log("[s_ui] Client '$username' not found in " . count($response['obj']) . " clients on '$namepanel'");
         return [];
     }
     
-    foreach ($response['obj'] as $client) {
-        if ($client['email'] == $username) {
-            // Fetch client connection links
-            $links_res = request_s_ui($namepanel, '/panel/api/clients/links/' . urlencode($username), 'GET');
-            $links = [];
-            if (isset($links_res['success']) && $links_res['success'] && is_array($links_res['obj'])) {
-                foreach ($links_res['obj'] as $uri) {
-                    $links[] = ['uri' => $uri];
+    // Fallback: try /panel/api/inbounds/list and search clients inside inbound settings
+    error_log("[s_ui] /panel/api/clients/list failed for '$namepanel', trying inbounds/list fallback");
+    $inb_response = request_s_ui($namepanel, '/panel/api/inbounds/list', 'GET');
+    if (!isset($inb_response['success']) || !$inb_response['success'] || !isset($inb_response['obj'])) {
+        // Also try POST
+        $inb_response = request_s_ui($namepanel, '/panel/api/inbounds/list', 'POST');
+    }
+    if (isset($inb_response['success']) && $inb_response['success'] && is_array($inb_response['obj'])) {
+        foreach ($inb_response['obj'] as $inbound) {
+            $settings = $inbound['settings'] ?? '';
+            if (is_string($settings)) {
+                $settings = json_decode($settings, true);
+            }
+            $clients = $settings['clients'] ?? [];
+            foreach ($clients as $client) {
+                if (isset($client['email']) && $client['email'] == $username) {
+                    // Build result from inbound-embedded client
+                    return array(
+                        'id' => $client['id'] ?? '',
+                        'name' => $client['email'],
+                        'email' => $client['email'],
+                        'enable' => $client['enable'] ?? true,
+                        'volume' => $client['totalGB'] ?? 0,
+                        'expiry' => $client['expiryTime'] ?? 0,
+                        'up' => $inbound['up'] ?? 0,
+                        'down' => $inbound['down'] ?? 0,
+                        'inbounds' => [intval($inbound['id'])],
+                        'desc' => $client['comment'] ?? ($client['desc'] ?? ''),
+                        'links' => [],
+                        'config' => $client
+                    );
                 }
             }
-            
-            return array(
-                'id' => $client['id'],
-                'name' => $client['email'],
-                'email' => $client['email'],
-                'enable' => $client['enable'],
-                'volume' => $client['totalGB'],
-                'expiry' => $client['expiryTime'],
-                'up' => $client['traffic']['up'] ?? 0,
-                'down' => $client['traffic']['down'] ?? 0,
-                'inbounds' => $client['inboundIds'] ?? [],
-                'desc' => $client['comment'] ?? '',
-                'links' => $links,
-                'config' => $client // Preserve raw record
-            );
         }
     }
     
+    error_log("[s_ui] Client '$username' not found via any method on '$namepanel'");
     return [];
 }
 
